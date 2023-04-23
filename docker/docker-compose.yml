@@ -5,6 +5,9 @@ x-airflow-common:
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker compose build` to build the images.
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.2.3}
+  build:
+      context: airflow-docker/
+      dockerfile: Dockerfile
   # build: .
   environment:
     &airflow-common-env
@@ -18,9 +21,9 @@ x-airflow-common:
     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
   volumes:
-    - ./dags:/opt/airflow/dags
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
+    - ./airflow-docker/dags:/opt/airflow/dags
+    - ./airflow-docker/logs:/opt/airflow/logs
+    - ./airflow-docker/plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -79,45 +82,45 @@ services:
     depends_on:
       - kafka1
 
-  spark-master:
-    image: merolhack/spark:latest
-    container_name: spark-master
-    hostname: spark-master
-    build:
-      context: spark-master/
-      dockerfile: Dockerfile
-    ports:
-      - 8080:8080
-      - 7077:7077
-      - 4040:4040
-      - 18081:18080
-    environment:
-      - SPARK_LOCAL_IP=spark-master
-      - SPARK_MASTER_PORT=7077
-      - SPARK_MASTER_WEBUI_PORT=8080
-      # - NVIDIA_VISIBLE_DEVICES=0
-    command: "/start-master.sh"
-    # runtime: "nvidia"
+  # spark-master:
+  #   image: merolhack/spark:latest
+  #   container_name: spark-master-docker
+  #   hostname: spark-master
+  #   build:
+  #     context: spark-docker/
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - 8080:8080
+  #     - 7077:7077
+  #     - 4040:4040
+  #     - 18081:18080
+  #   environment:
+  #     - SPARK_LOCAL_IP=spark-master
+  #     - SPARK_MASTER_PORT=7077
+  #     - SPARK_MASTER_WEBUI_PORT=8080
+  #     # - NVIDIA_VISIBLE_DEVICES=0
+  #   command: "/start-master.sh"
+  #   # runtime: "nvidia"
 
-  spark-worker:
-    image: merolhack/spark:latest
-    depends_on:
-      - spark-master
-    ports:
-      - 8080
-    environment:
-      - SPARK_MASTER=spark://spark-master:7077
-      - SPARK_WORKER_WEBUI_PORT=8080
-    command: "/start-worker.sh"
+  # spark-worker:
+  #   image: merolhack/spark:latest
+  #   depends_on:
+  #     - spark-master
+  #   ports:
+  #     - 8080
+  #   environment:
+  #     - SPARK_MASTER=spark://spark-master:7077
+  #     - SPARK_WORKER_WEBUI_PORT=8080
+  #   command: "/start-worker.sh"
 
- nginx:
-    container_name: nginx
-    restart: always
-    build:
-      context: nginx-docker/
-      dockerfile: Dockerfile
-    ports:
-      - 5307:5307
+#  nginx:
+#     container_name: nginx
+#     restart: always
+    # build:
+    #   context: nginx-docker/
+      # dockerfile: Dockerfile
+    # ports:
+    #   - 5307:5307
 
   postgres:
     image: postgres:13
