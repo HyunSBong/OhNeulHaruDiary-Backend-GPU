@@ -10,7 +10,7 @@ class KafkaConnector:
                                  bootstrap_servers = brokers,
                                  compression_type='gzip',
                                  value_serializer = lambda x: dumps(x, ensure_ascii=False).encode('utf-8'),
-                                api_version=(0, 11, 5))
+                                 api_version=(0,10,2))
         producer.send(topic, value = data)
         producer.flush()
 
