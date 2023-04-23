@@ -34,7 +34,7 @@
 ||djangorestframework|3.14.0|
 ||django-storages|1.13.2|
 ||boto3|1.26.114|
-|ML|Pytorch|2.0.0|
+|ML|torch|2.0.0|
 ||diffusers|0.15.0|
 ||transformers|4.28.1|
 ||accelerate|0.18.0|
