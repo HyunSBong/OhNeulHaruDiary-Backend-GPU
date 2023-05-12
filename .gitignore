@@ -26,6 +26,7 @@ media
 ### Test Files ###
 test_kafka_consumer.py
 test_kafka_producer.py
+data/*
 
 ### jupyter ###
 .ipynb_checkpoints
