@@ -153,9 +153,10 @@ AWS_REGION = env('AWS_REGION')
 
 # AWS S3
 AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com' % (AWS_STORAGE_BUCKET_NAME,AWS_REGION)
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com/' % (AWS_STORAGE_BUCKET_NAME,AWS_REGION)
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'path/to/store/my/files/')
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIAFILES_LOCATION = 'media'
