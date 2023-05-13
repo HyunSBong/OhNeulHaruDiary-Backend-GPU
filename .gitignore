@@ -28,5 +28,10 @@ test_kafka_consumer.py
 test_kafka_producer.py
 data/*
 
+
+## weights ##
+weights/*
+Django-Server/mlAPi/weights/*
+
 ### jupyter ###
 .ipynb_checkpoints
