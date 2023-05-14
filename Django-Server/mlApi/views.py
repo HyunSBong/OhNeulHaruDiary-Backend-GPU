@@ -17,6 +17,7 @@ from . import diffusion
 
 import uuid
 import boto3
+import time
 
 # class MLItemViewSet(viewsets.ModelViewSet):
 #     queryset = MLItem.objects.all()
@@ -87,45 +88,25 @@ class SummaryDialogueView(CreateAPIView):
     serializer_class = MLItemSerializer
 
     def perform_create(self, serializer):
-        full_diary = self.request.data.get("full_diary", None)
-        full_dialog = self.request.data.get("full_dialog", None) 
-        prompt = self.request.data.get("prompt", None)
-        url = self.request.data.get("url", None)
-        thumbnail_url = self.request.data.get("thumbnail_url", None)
-        req_files = self.request.FILES.getlist('req_files') # 얘는 꼭 필요 -> 이미지에서 가져와야함.
+        req_urls = self.request.data.get('req_urls') # 얘는 꼭 필요 -> 이미지에서 가져와야함.
+
+        sum_dialogue = []
         
-
-        optimized_prompt = ''
-        dialogues = []
-        file_urls = []
-        for file in req_files:
-            # full_dialog = recog. ## 이미지에서 대화추출 로직 output: List type
-            # summarize = summ.inference_dialogue(full_dialog) # input: List type
-            # dialogues.append(summarize)
-            # S3 upload
-            AWS_ACCESS_KEY_ID = getattr(settings, 'AWS_ACCESS_KEY_ID', 'AWS_ACCESS_KEY_ID')
-            AWS_SECRET_ACCESS_KEY = getattr(settings, 'AWS_SECRET_ACCESS_KEY', 'AWS_SECRET_ACCESS_KEY')
-            AWS_STORAGE_BUCKET_NAME = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'AWS_STORAGE_BUCKET_NAME')
-            AWS_S3_CUSTOM_DOMAIN = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', 'AWS_S3_CUSTOM_DOMAIN')
-            try :
-                s3r = boto3.resource('s3', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-                file._set_name(str(uuid.uuid4()))
-                s3r.Bucket(AWS_STORAGE_BUCKET_NAME).put_object(Body=file)
-
-                file_urls.append(AWS_S3_CUSTOM_DOMAIN+"%s"%(file))
-            except:
-                return Response (serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # optimized_prompt = promptist.promptist_manual(dialogues)
-        optimized_prompt = 'test'
+        for url in req_urls:
+            dialogue = recog.clova_ocr(url) # url은 s3 url로 받아야함.
+            print(dialogue)
+            for content in dialogue:
+                for raw in content:
+                    sum_dialogue.append(raw)
+        
+        summarize = summ.inference_dialogue(sum_dialogue) # input: List type
+        optimized_prompt = promptist.promptist_manual(summarize)
 
         if serializer.is_valid():
             serializer.save(
-                full_diary = full_diary,
-                full_dialog = full_dialog,
+                full_dialog = sum_dialogue,
                 prompt = optimized_prompt,
-                url = file_urls,
-                thumbnail_url = thumbnail_url
+                url = req_urls
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED) 
         return Response (serializer.errors, status=status.HTTP_400_BAD_REQUEST)
