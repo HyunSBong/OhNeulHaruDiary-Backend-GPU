@@ -27,6 +27,7 @@ media
 test_kafka_consumer.py
 test_kafka_producer.py
 data/*
+json_sample.json
 
 
 ## weights ##
