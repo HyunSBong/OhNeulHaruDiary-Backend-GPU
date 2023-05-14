@@ -160,3 +160,7 @@ AWS_S3_OBJECT_PARAMETERS = {
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 MEDIAFILES_LOCATION = 'media'
+
+# Naver Cloud Platform
+NCP_SECRET_KEY = env('NCP_SECRET_KEY')
+NCP_APIGW_URL = env('NCP_APIGW_URL')
