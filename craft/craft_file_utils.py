@@ -16,6 +16,10 @@ def list_files(in_path):
     for (dirpath, dirnames, filenames) in os.walk(in_path):
         for file in filenames:
             filename, ext = os.path.splitext(file)
+            if filename[:4] == 'res_':
+                continue
+            if filename[:5] == 'crop_':
+                continue
             ext = str.lower(ext)
             if ext == '.jpg' or ext == '.jpeg' or ext == '.gif' or ext == '.png' or ext == '.pgm':
                 img_files.append(os.path.join(dirpath, file))
