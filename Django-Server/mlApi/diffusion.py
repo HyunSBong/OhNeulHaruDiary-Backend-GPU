@@ -36,7 +36,7 @@ def uploadS3(filename):
                     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
                     region_name=AWS_REGION)
 
-    with open(f'temp/{filename}.png', 'rb') as data:
+    with open(f'{os.getcwd()}/mlAPi/temp/{filename}.png', 'rb') as data:
         client.upload_file(data.name, AWS_STORAGE_BUCKET_NAME, filename)
     
     url = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.ap-northeast-2.amazonaws.com/{filename}"
