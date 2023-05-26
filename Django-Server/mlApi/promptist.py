@@ -1,4 +1,9 @@
+import os
+
+# google
 import googletrans
+
+# ML
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 def translator(original):
@@ -9,8 +14,8 @@ def translator(original):
     return outStr.text
 
 def load_prompter():
-    prompter_model = AutoModelForCausalLM.from_pretrained("./weights/ms-promptist/", local_files_only=True)
-    tokenizer = AutoTokenizer.from_pretrained("./weights/gpt2/", local_files_only=True)
+    prompter_model = AutoModelForCausalLM.from_pretrained(f"{os.getcwd()}/mlAPi/weights/ms-promptist/", local_files_only=True)
+    tokenizer = AutoTokenizer.from_pretrained(f"{os.getcwd()}/mlAPi/weights/gpt2/", local_files_only=True)
 
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"

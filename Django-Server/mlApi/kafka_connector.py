@@ -22,5 +22,5 @@ class KafkaConnector:
             enable_auto_commit = True,
             auto_offset_reset = 'latest',
             value_deserializer = lambda m: loads(m),
-            api_version=(0, 11, 5))
+            api_version=(0,10,2))
         return consumer
