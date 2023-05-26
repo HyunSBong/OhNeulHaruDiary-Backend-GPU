@@ -35,7 +35,7 @@ def get_dialogue(data):
 
     bbox_ls = []
     images_ls = json_data.get('images')
-    print(images_ls)
+    # print('images :' + str(images_ls))
     fields_ls = images_ls[0]['fields']
 
     for idx, field in enumerate(fields_ls):
@@ -80,6 +80,7 @@ def get_dialogue(data):
 
 
 def clova_ocr(image_url):
+    print(image_url)
 
     request_json = {
         'images': [
@@ -96,8 +97,8 @@ def clova_ocr(image_url):
 
     payload = json.dumps(request_json).encode('UTF-8')
     headers = {
-    'X-OCR-SECRET': NCP_SECRET_KEY,
-    'Content-Type': 'application/json'
+        'X-OCR-SECRET': NCP_SECRET_KEY,
+        'Content-Type': 'application/json'
     }
     response = requests.request("POST", NCP_APIGW_URL, headers=headers, data = payload)
     # 대화 추출

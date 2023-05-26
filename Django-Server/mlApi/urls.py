@@ -11,5 +11,5 @@ urlpatterns = [
     path('summaryDiary/', views.SummaryDiaryView.as_view()),
     path('summaryDialogue/', views.SummaryDialogueView.as_view()),
     path('generateImage/create', views.GenerateImageCreateView.as_view()),
-    path('generateImage/update', views.GenerateImageUpdateView.as_view()),
+    # path('generateImage/update', views.GenerateImageUpdateView.as_view()),
 ]

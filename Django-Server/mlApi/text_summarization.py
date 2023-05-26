@@ -1,3 +1,6 @@
+import os
+
+# ML
 import torch
 from transformers import AutoTokenizer, AutoModel
 from transformers import PreTrainedTokenizerFast, BartModel
@@ -5,8 +8,8 @@ from transformers import BartForConditionalGeneration
 
 def inference_diary(text):
     # text = "오늘은 ~~~~~재밌는 하루였다"
-    tokenizer = AutoTokenizer.from_pretrained("./weights/kobart-summ/", local_files_only=True)
-    model = BartForConditionalGeneration.from_pretrained("./weights/kobart-summ/", local_files_only=True)
+    tokenizer = AutoTokenizer.from_pretrained(f"{os.getcwd()}/mlAPi/weights/kobart-summ/", local_files_only=True)
+    model = BartForConditionalGeneration.from_pretrained(f"{os.getcwd()}/mlAPi/weights/kobart-summ/", local_files_only=True)
 
     text = text.replace('\n', ' ')
     raw_input_ids = tokenizer.encode(text)
@@ -27,8 +30,8 @@ def inference_dialogue(dialogue):
     num_beams = 5
     length_penalty = 1.2
 
-    tokenizer = AutoTokenizer.from_pretrained("../weights/alaggung-bart-r3f/")
-    model = BartForConditionalGeneration.from_pretrained("../weights/alaggung-bart-r3f/")
+    tokenizer = AutoTokenizer.from_pretrained(f"{os.getcwd()}/mlAPi/weights/alaggung-bart-r3f/")
+    model = BartForConditionalGeneration.from_pretrained(f"{os.getcwd()}/mlAPi/weights/alaggung-bart-r3f/")
 
     inputs = tokenizer("[BOS]" + "[SEP]".join(dialogue) + "[EOS]", return_tensors="pt")
     outputs = model.generate(
