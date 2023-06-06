@@ -79,7 +79,7 @@ def get_dialogue(data):
     return new_bbox_ls
 
 
-def clova_ocr(image_url):
+def clova_ocr(idx, image_url, return_dict):
     print(image_url)
 
     request_json = {
@@ -103,5 +103,12 @@ def clova_ocr(image_url):
     response = requests.request("POST", NCP_APIGW_URL, headers=headers, data = payload)
     # 대화 추출
     res = get_dialogue(response)
+    
+    sum_dialogue = []
+    for content in res:
+        for raw in content:
+            sum_dialogue.append(raw)
 
-    return res
+    return_dict[idx] = sum_dialogue
+
+    # return res
