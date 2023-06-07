@@ -30,6 +30,7 @@ def isHangul(text):
 def get_dialogue(data):
     # with open('json_sample.json', encoding='utf-8') as data:
     json_data = json.loads(data.text.encode('utf8'))
+    print(json_data)
     # json_data = json.load(data)
     # json_data = data
 
@@ -103,6 +104,7 @@ def clova_ocr(idx, image_url, return_dict):
     response = requests.request("POST", NCP_APIGW_URL, headers=headers, data = payload)
     # 대화 추출
     res = get_dialogue(response)
+    print(res)
     
     sum_dialogue = []
     for content in res:

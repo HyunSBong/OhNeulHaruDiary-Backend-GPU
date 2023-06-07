@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession
 
 # Spark Context
 conf = SparkConf()
-conf.setMaster('spark://spark-master:7077')
+conf.setMaster('spark://spark-master:7077') # spark-master
 conf.setAppName('spark-base-conf')
 sc = SparkContext(conf=conf)
 
@@ -16,45 +16,52 @@ spark = SparkSession \
 .config("spark.some.config.option", "some-value") \
 .getOrCreate()
 
-sc.addFile("/spark/bart.py")
-import bart
+# sc.addFile("/spark/bart.py")
+# import bart
 
-sc.addFile("/spark/prompt_diffusion.py")
-import prompt_diffusion
+sc.addFile("/diffusion.py")
+import diffusion
 
-# get from kefka
+# get from kefka (broker : kafka1)
 # topic -> user-diary
 df_raw = spark \
-.readStream \
-.format('kafka') \
-.option('kafka.bootstrap.servers', 'kafka:9091') \
-.option("startingOffsets", "earliest") \
-.option('subscribe', 'user-diary') \
-.load()
+    .readStream \
+    .format('kafka') \
+    .option('kafka.bootstrap.servers', 'kafka1:19091') \
+    .option("startingOffsets", "earliest") \
+    .option('subscribe', 'inference_prompt') \
+    .load()
 
-df_spark_init = df_raw.selectExpr('CAST(value AS STRING) as value')
+query = df_raw \
+    .writeStream \
+    .queryName("kafka_spark_console")\
+    .format("console") \
+    .option("truncate", "false") \
+    .start()
+
+# query.awaitTermination()
+
+df_spark = df_raw.selectExpr('CAST(value AS STRING) as value')
+
+print(df_spark)
 
 schema = StructType([ \
-StructField("user_id",StringType(),True), \
-StructField("content", TimestampType(),True)
+StructField("diary_id", StringType(),True), \
+StructField("prompt", StringType(),True)
 ])
 
-summarize_udf = udf(lambda x: bart.summarize(x), StringType())
-prompt_udf = udf(lambda x: prompt_diffusion.generate_prompt(x), StringType())
-gen_img_udf = udf(lambda x: prompt_diffusion.generate_img(x), StringType())
+df2 = df_spark.select(from_json("value",schema).alias("data")).select("data.*")
 
-df_spark = df_spark_init.select(from_json("value",schema).alias("data")).select("data.*")
-df_spark_updated = df_spark \
-.withColumn("summaize", summarize_udf(col("content"))) \
-.withColumn("prompt", prompt_udf(col("content"))) \
-.withColumn("img", gen_img_udf(col("content"))).alias("data")
+gen_img_udf = udf(lambda x: diffusion.generate_one(x), StringType())
 
-# send to kafka
-df_spark_updated \
+df3 = df2 \
+.withColumn("url", gen_img_udf(col('prompt'))).alias('url')
+
+df3 \
 .selectExpr("CAST('data' AS STRING) AS key", "to_json(struct(*)) AS value") \
 .writeStream    \
 .format('kafka') \
-.option('kafka.bootstrap.servers', 'kafka:9091') \
-.option('topic', 'user-diary-prompt') \
+.option('kafka.bootstrap.servers', 'kafka1:19091') \
+.option('topic', 'output') \
 .option("truncate", False).option("checkpointLocation", "/tmp/dtn/checkpoint") \
 .start().awaitTermination()
