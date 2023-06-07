@@ -21,7 +21,7 @@ import multiprocessing as mp
 ## env
 from django.conf import settings
 
-kafka_topic = ('inference_diary', 'inference_dialogue', 'diffusion')
+kafka_topic = ('inference_prompt', 'image')
 
 class TestPostMessageKafkaView(CreateAPIView):
     model = MLItem
@@ -66,12 +66,9 @@ class SummaryDiaryView(CreateAPIView):
         prompt = self.request.data.get("prompt", None)
         url = self.request.data.get("url", None)
         thumbnail_url = self.request.data.get("thumbnail_url", None)
-        diary_id = self.request.data.get('diary_id', None)
+        diary_id = self.request.data.get("diary_id", None)
 
-        summarize = summ.inference_diary(full_diary) # input: String type
-        # print(summarize)
-        # summarize = "친구와 역에서 만났다."
-        optimized_prompt = promptist.promptist_manual(summarize)
+        optimized_prompt = kn.to_kafka_summm_infer_diary(kafka_topic[0], diary_id, full_diary)
 
         if serializer.is_valid():
             serializer.save(
@@ -89,11 +86,11 @@ class SummaryDialogueView(CreateAPIView):
     serializer_class = MLItemSerializer
 
     def perform_create(self, serializer):
-        req_urls = self.request.data.get('req_urls', None) # 얘는 꼭 필요 -> 이미지에서 가져와야함.
-        diary_id = self.request.data.get('diary_id', None)
+        req_urls = self.request.data.get('req_urls') # 얘는 꼭 필요 -> 이미지에서 가져와야함.
+        diary_id = self.request.data.get("diary_id", None)
         
         AWS_STORAGE_BUCKET_NAME = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'AWS_STORAGE_BUCKET_NAME')
-
+        
         processes = []  
         manager = mp.Manager()
         return_dict = manager.dict()
@@ -110,14 +107,11 @@ class SummaryDialogueView(CreateAPIView):
         sorted_return_dict = sorted(return_dict.items())
         get_values = lambda lst: [value for _, value in lst]
         sum_dialogue = get_values(sorted_return_dict)
+        if len(req_urls) > 1:
+            get_values = lambda lst: [value[0] for value in lst]
+            sum_dialogue = get_values(sum_dialogue)
 
-        get_values = lambda lst: [value[0] for value in lst]
-        sum_dialogue = get_values(sum_dialogue)
-        print(sum_dialogue)
-        
-        summarize = summ.inference_dialogue(sum_dialogue) # input: List type
-        print(summarize)
-        optimized_prompt = promptist.promptist_manual(summarize)
+        optimized_prompt = kn.to_kafka_summm_infer_diary(kafka_topic[0], diary_id, sum_dialogue)
 
         if serializer.is_valid():
             serializer.save(
@@ -161,4 +155,3 @@ class GenerateImageCreateView(CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED) 
         except:
             return Response (serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
