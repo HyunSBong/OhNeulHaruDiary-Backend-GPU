@@ -30,7 +30,6 @@ def isHangul(text):
 def get_dialogue(data):
     # with open('json_sample.json', encoding='utf-8') as data:
     json_data = json.loads(data.text.encode('utf8'))
-    print(json_data)
     # json_data = json.load(data)
     # json_data = data
 
@@ -64,10 +63,23 @@ def get_dialogue(data):
 
     new_bbox_ls = []
     dialogue = []
+
+    # 날짜 판별 "11:34"
+    time_pattern = re.compile(r'^\d{1,2}:\d{2}$')
+    check_time_format = lambda time_str: bool(time_pattern.match(time_str))
+
     for idx, row in enumerate(bbox_ls):
         if row[-1] == participant:
             continue
+        elif check_time_format(row[-1]):
+            new_bbox_ls.append(dialogue)
+            dialogue = []
+            continue
         elif row[-1] == 'PM' or row[-1] == 'AM':
+            new_bbox_ls.append(dialogue)
+            dialogue = []
+            continue
+        elif row[-1] == '오전' or row[-1] == '오후':
             new_bbox_ls.append(dialogue)
             dialogue = []
             continue
@@ -76,8 +88,14 @@ def get_dialogue(data):
         
         if isHangul(row[-1]):
             dialogue.append(row[-1])
-    
-    return new_bbox_ls
+            
+    result = []
+    if len(new_bbox_ls) > 2:
+        for idx, content in enumerate(new_bbox_ls):
+            if len(content) != 0:
+                result.append(' '.join(content))
+    print(result)
+    return result
 
 
 def clova_ocr(idx, image_url, return_dict):
@@ -102,15 +120,8 @@ def clova_ocr(idx, image_url, return_dict):
         'Content-Type': 'application/json'
     }
     response = requests.request("POST", NCP_APIGW_URL, headers=headers, data = payload)
+    print(response)
     # 대화 추출
     res = get_dialogue(response)
-    print(res)
-    
-    sum_dialogue = []
-    for content in res:
-        for raw in content:
-            sum_dialogue.append(raw)
 
-    return_dict[idx] = sum_dialogue
-
-    # return res
+    return_dict[idx] = res
