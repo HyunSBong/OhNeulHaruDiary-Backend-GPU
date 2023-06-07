@@ -36,3 +36,7 @@ Django-Server/mlAPi/weights/*
 
 ### jupyter ###
 .ipynb_checkpoints
+
+### Other ###
+/temp/*
+Django-Server/mlAPi/temp/*

@@ -1,6 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
 
+import os
+
 from . import promptist
 from . import text_summarization as summ
 from . import text_recognition as recog
@@ -8,16 +10,37 @@ from . import diffusion
 
 from . import kafka_connector
 
+# k_producer = kafka_connector.KafkaConnector()
 k_producer = kafka_connector.KafkaConnector()
 k_consumer = kafka_connector.KafkaConnector()
 
-kafka_topic = ('inference_diary', 'inference_dialogue', 'diffusion')
+kafka_topic = ('inference_prompt', 'image')
 
-def to_kafka_summm_infer_diary(topic, v):
-    return k_producer.Kafka_Producer(topic, v)
+def to_kafka_summm_infer_diary(topic, diary_id, full_diary):
+    summarize = summ.inference_diary(full_diary) # input: String type
+    optimized_prompt = promptist.promptist_manual(summarize)
 
-def to_kafka_summm_infer_dialogue(topic, v):
-    k_producer.Kafka_Producer(topic, v)
+    data = {
+        'diary_id': diary_id,
+        'prompt': optimized_prompt
+    }
+    
+    k_producer.Kafka_Producer(topic, data)
+    
+    return optimized_prompt
+
+def to_kafka_summm_infer_dialogue(topic, diary_id, sum_dialogue):
+    summarize = summ.inference_dialogue(sum_dialogue) # input: List type
+    optimized_prompt = promptist.promptist_manual(summarize)
+
+    data = {
+        'diary_id': diary_id,
+        'prompt': optimized_prompt
+    }
+
+    k_producer.Kafka_Producer(topic, data)
+    
+    return optimized_prompt
 
 def to_kafka_diffusion(topic, v):
     k_producer.Kafka_Producer(topic, v)

@@ -1,10 +1,8 @@
-FROM nvidia/cuda:11.2.2-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu20.04
 
-ENV DEBIAN_FRONTEND noninteractive
-
-ARG SPARK_VERSION=3.1.2
+ARG SPARK_VERSION=3.2.1
 ARG HADOOP_VERSION=3.2
-ARG PYTHON_VERSION=3.9.2
+ARG PYTHON_VERSION=3.8.3
 
 RUN apt-get -y update && apt-get -y upgrade && \
     apt-get -y install --no-install-recommends \
@@ -12,10 +10,9 @@ RUN apt-get -y update && apt-get -y upgrade && \
     build-essential checkinstall \
     libreadline-gplv2-dev libncursesw5-dev libssl-dev \
     libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev liblzma-dev \
-    openjdk-11-jdk
-
-COPY start-master.sh /start-master.sh
-COPY start-worker.sh /start-worker.sh
+    openjdk-8-jdk \
+    gcc+ \
+    git
 
 RUN wget https://mirror.navercorp.com/apache/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
     wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz
@@ -33,14 +30,7 @@ RUN tar -xvf Python-${PYTHON_VERSION}.tgz && \
 
 ENV PYSPARK_PYTHON=python3
 
-RUN chmod +x /start-master.sh
-RUN chmod +x /start-worker.sh
-WORKDIR /spark
-
-COPY . /spark
-
 ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/local/cuda/include:/usr/local/cuda/lib64
 
 RUN pip3 install --upgrade pip && \
-    pip3 install --upgrade setuptools && \
-    pip3 install --no-cache-dir -r requirements.txt
+    pip3 install --upgrade setuptools

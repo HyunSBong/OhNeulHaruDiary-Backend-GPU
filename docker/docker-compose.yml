@@ -1,36 +1,36 @@
 version: "3"
-x-airflow-common:
-  &airflow-common
-  # In order to add custom dependencies or upgrade provider packages you can use your extended image.
-  # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
-  # and uncomment the "build" line below, Then run `docker compose build` to build the images.
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.2.3}
-  build:
-      context: airflow-docker/
-      dockerfile: Dockerfile
-  # build: .
-  environment:
-    &airflow-common-env
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CORE__FERNET_KEY: ''
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
-    AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-  volumes:
-    - ./airflow-docker/dags:/opt/airflow/dags
-    - ./airflow-docker/logs:/opt/airflow/logs
-    - ./airflow-docker/plugins:/opt/airflow/plugins
-  user: "${AIRFLOW_UID:-50000}:0"
-  depends_on:
-    &airflow-common-depends-on
-    redis:
-      condition: service_healthy
-    postgres:
-      condition: service_healthy
+# x-airflow-common:
+#   &airflow-common
+#   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
+#   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
+#   # and uncomment the "build" line below, Then run `docker compose build` to build the images.
+#   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.2.3}
+#   build:
+#       context: airflow-docker/
+#       dockerfile: Dockerfile
+#   # build: .
+#   environment:
+#     &airflow-common-env
+#     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+#     AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+#     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+#     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+#     AIRFLOW__CORE__FERNET_KEY: ''
+#     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+#     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+#     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
+#     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+#   volumes:
+#     - ./airflow-docker/dags:/opt/airflow/dags
+#     - ./airflow-docker/logs:/opt/airflow/logs
+#     - ./airflow-docker/plugins:/opt/airflow/plugins
+#   user: "${AIRFLOW_UID:-50000}:0"
+#   depends_on:
+#     &airflow-common-depends-on
+#     redis:
+#       condition: service_healthy
+#     postgres:
+#       condition: service_healthy
 
 services:
   zookeeper:
@@ -40,32 +40,22 @@ services:
     ports:
       - "2181:2181"
     restart: unless-stopped
-
+  
   kafka1:
-    build: .
+    image: confluentinc/cp-kafka:7.0.0
     hostname: kafka1
     container_name: kafka1-docker
-    build:
-      context: kafka-docker/
-      dockerfile: Dockerfile
     ports:
       - "9091:9091"
     environment:
-      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1:19091,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9091
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      KAFKA_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1:19091,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9091  # 리스너 들의 목록이고, 호스트/ip 로 구성한다. 해당 옵션을 사용하지 않으면 모든 인터페이스에서 수신 할 수 있다. 기본값. 0.0.0.0
-      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1:19091,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9091  # PLAINTEXT://{public ip혹은 hostname}(consumer나 producer에서 접속할 ip혹은 도메인):9092 kafka 브로커를 가리키는 사용 가능 주소로 초기연결시에 클라이언트에 전달되는 메타 데이터
-      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL  #브로커 간 통신에 사용할 리스너를 정의. KAFKA_ADVERTISED_LISTENERS 가 여러개인 경우 꼭 사용해야함
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT  # the listener name is not a security protocol, listener.security.protocol.map must also be set. PLAINTEXT는 리스너가 암호화되지 않은 것을 말함.
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3  # default 3. cluster 내 broker에 토픽이 분산되어 저장된다. 싱글노드에서 테스트 할 때는 1로 설정해준다.
-      KAFKA_NUM_PARTITIONS: 3  #토픽이 몇 개의 파티션으로 생성되는지. 기본 값은 1개이다. 토픽의 파티션 개수는 증가만 가능하고 감소될 수 없다. (클러스터의 브로커수와 그의 배수로 해주는 것이 권장된다.)
-      KAFKA_LOG_DIRS: /kafka-logs  #오프셋을 포함한 토픽 정보가 저장되는 경로
-      KAFKA_CREATE_TOPICS: "test-cluster-topic:1:1,inchat:1:1,outchat:1:1"
-      KAFKA_SOCKET_REQUEST_MAX_BYTES: 100001200
-      KAFKA_MESSAGE_MAX_BYTES: 100001200
-      KAFKA_CFG_MAX_REQUEST_SIZE: 100001200
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/kafka1/data:/tmp/kafka-logs
     depends_on:
       - zookeeper
     restart: unless-stopped
@@ -81,37 +71,64 @@ services:
       KAFKA_BROKER_CONNECT: "kafka1:19091"
     depends_on:
       - kafka1
+    
+  namenode:
+    image: bde2020/hadoop-namenode:latest # 3.2.1
+    container_name: namenode
+    volumes:
+      - ./hadoop-docker/namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=test
+    env_file:
+      - ./hadoop-docker/hadoop.env
+    ports:
+      - 50070:50070
 
-  # spark-master:
-  #   image: merolhack/spark:latest
-  #   container_name: spark-master-docker
-  #   hostname: spark-master
-  #   build:
-  #     context: spark-docker/
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - 8080:8080
-  #     - 7077:7077
-  #     - 4040:4040
-  #     - 18081:18080
-  #   environment:
-  #     - SPARK_LOCAL_IP=spark-master
-  #     - SPARK_MASTER_PORT=7077
-  #     - SPARK_MASTER_WEBUI_PORT=8080
-  #     # - NVIDIA_VISIBLE_DEVICES=0
-  #   command: "/start-master.sh"
-  #   # runtime: "nvidia"
+  datanode:
+    image: bde2020/hadoop-datanode:latest # 3.2.1
+    depends_on:
+      - namenode
+    volumes:
+      - ./hadoop-docker/datanode:/hadoop/dfs/data
+    env_file:
+      - ./hadoop-docker/hadoop.env
+    ports:
+      - 50075:50075
 
-  # spark-worker:
-  #   image: merolhack/spark:latest
-  #   depends_on:
-  #     - spark-master
-  #   ports:
-  #     - 8080
-  #   environment:
-  #     - SPARK_MASTER=spark://spark-master:7077
-  #     - SPARK_WORKER_WEBUI_PORT=8080
-  #   command: "/start-worker.sh"
+  spark-master:
+    image: bde2020/spark-master:3.2.1-hadoop3.2
+    container_name: spark-master-docker
+    hostname: spark-master
+    # build:
+    #   context: spark-docker/
+    #   dockerfile: Dockerfile
+    ports:
+      - 8083:8083
+      - 7077:7077
+      - 4040:4040
+      - 18081:18080
+    environment:
+      - SPARK_LOCAL_IP=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8083
+      # - NVIDIA_VISIBLE_DEVICES=0
+    env_file:
+      - ./hadoop-docker/hadoop.env
+    # command: "/start-master.sh"
+    # runtime: "nvidia"
+
+  spark-worker:
+    image: bde2020/spark-worker:3.2.1-hadoop3.2
+    depends_on:
+      - spark-master
+    ports:
+      - 8083
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKER_WEBUI_PORT=8083
+    # command: "/start-worker.sh"
+    env_file:
+      - ./hadoop-docker/hadoop.env
 
 #  nginx:
 #     container_name: nginx
@@ -122,201 +139,201 @@ services:
     # ports:
     #   - 5307:5307
 
-  postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
-      interval: 5s
-      retries: 5
-    restart: always
+  # postgres:
+  #   image: postgres:13
+  #   environment:
+  #     POSTGRES_USER: airflow
+  #     POSTGRES_PASSWORD: airflow
+  #     POSTGRES_DB: airflow
+  #   volumes:
+  #     - postgres-db-volume:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "airflow"]
+  #     interval: 5s
+  #     retries: 5
+  #   restart: always
 
-  redis:
-    image: redis:latest
-    expose:
-      - 6379
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 30s
-      retries: 50
-    restart: always
+  # redis:
+  #   image: redis:latest
+  #   expose:
+  #     - 6379
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 30s
+  #     retries: 50
+  #   restart: always
 
-  airflow-webserver:
-    <<: *airflow-common
-    command: webserver
-    ports:
-      - 8082:8082
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8082/health"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    restart: always
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
+  # airflow-webserver:
+  #   <<: *airflow-common
+  #   command: webserver
+  #   ports:
+  #     - 8082:8082
+  #   healthcheck:
+  #     test: ["CMD", "curl", "--fail", "http://localhost:8082/health"]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 5
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow-init:
+  #       condition: service_completed_successfully
 
-  airflow-scheduler:
-    <<: *airflow-common
-    command: scheduler
-    healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    restart: always
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
+  # airflow-scheduler:
+  #   <<: *airflow-common
+  #   command: scheduler
+  #   healthcheck:
+  #     test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 5
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow-init:
+  #       condition: service_completed_successfully
 
-  airflow-worker:
-    <<: *airflow-common
-    command: celery worker
-    healthcheck:
-      test:
-        - "CMD-SHELL"
-        - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    environment:
-      <<: *airflow-common-env
-      # Required to handle warm shutdown of the celery workers properly
-      # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
-      DUMB_INIT_SETSID: "0"
-    restart: always
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
+  # airflow-worker:
+  #   <<: *airflow-common
+  #   command: celery worker
+  #   healthcheck:
+  #     test:
+  #       - "CMD-SHELL"
+  #       - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 5
+  #   environment:
+  #     <<: *airflow-common-env
+  #     # Required to handle warm shutdown of the celery workers properly
+  #     # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
+  #     DUMB_INIT_SETSID: "0"
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow-init:
+  #       condition: service_completed_successfully
 
-  airflow-triggerer:
-    <<: *airflow-common
-    command: triggerer
-    healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    restart: always
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
+  # airflow-triggerer:
+  #   <<: *airflow-common
+  #   command: triggerer
+  #   healthcheck:
+  #     test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 5
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow-init:
+  #       condition: service_completed_successfully
 
-  airflow-init:
-    <<: *airflow-common
-    entrypoint: /bin/bash
-    # yamllint disable rule:line-length
-    command:
-      - -c
-      - |
-        function ver() {
-          printf "%04d%04d%04d%04d" $${1//./ }
-        }
-        airflow_version=$$(gosu airflow airflow version)
-        airflow_version_comparable=$$(ver $${airflow_version})
-        min_airflow_version=2.2.0
-        min_airflow_version_comparable=$$(ver $${min_airflow_version})
-        if (( airflow_version_comparable < min_airflow_version_comparable )); then
-          echo
-          echo -e "\033[1;31mERROR!!!: Too old Airflow version $${airflow_version}!\e[0m"
-          echo "The minimum Airflow version supported: $${min_airflow_version}. Only use this or higher!"
-          echo
-          exit 1
-        fi
-        if [[ -z "${AIRFLOW_UID}" ]]; then
-          echo
-          echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
-          echo "If you are on Linux, you SHOULD follow the instructions below to set "
-          echo "AIRFLOW_UID environment variable, otherwise files will be owned by root."
-          echo "For other operating systems you can get rid of the warning with manually created .env file:"
-          echo "    See: https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#setting-the-right-airflow-user"
-          echo
-        fi
-        one_meg=1048576
-        mem_available=$$(($$(getconf _PHYS_PAGES) * $$(getconf PAGE_SIZE) / one_meg))
-        cpus_available=$$(grep -cE 'cpu[0-9]+' /proc/stat)
-        disk_available=$$(df / | tail -1 | awk '{print $$4}')
-        warning_resources="false"
-        if (( mem_available < 4000 )) ; then
-          echo
-          echo -e "\033[1;33mWARNING!!!: Not enough memory available for Docker.\e[0m"
-          echo "At least 4GB of memory required. You have $$(numfmt --to iec $$((mem_available * one_meg)))"
-          echo
-          warning_resources="true"
-        fi
-        if (( cpus_available < 2 )); then
-          echo
-          echo -e "\033[1;33mWARNING!!!: Not enough CPUS available for Docker.\e[0m"
-          echo "At least 2 CPUs recommended. You have $${cpus_available}"
-          echo
-          warning_resources="true"
-        fi
-        if (( disk_available < one_meg * 10 )); then
-          echo
-          echo -e "\033[1;33mWARNING!!!: Not enough Disk space available for Docker.\e[0m"
-          echo "At least 10 GBs recommended. You have $$(numfmt --to iec $$((disk_available * 1024 )))"
-          echo
-          warning_resources="true"
-        fi
-        if [[ $${warning_resources} == "true" ]]; then
-          echo
-          echo -e "\033[1;33mWARNING!!!: You have not enough resources to run Airflow (see above)!\e[0m"
-          echo "Please follow the instructions to increase amount of resources available:"
-          echo "   https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#before-you-begin"
-          echo
-        fi
-        mkdir -p /sources/logs /sources/dags /sources/plugins
-        chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
-        exec /entrypoint airflow version
-    # yamllint enable rule:line-length
-    environment:
-      <<: *airflow-common-env
-      _AIRFLOW_DB_UPGRADE: 'true'
-      _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
-      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
-    user: "0:0"
-    volumes:
-      - .:/sources
+  # airflow-init:
+  #   <<: *airflow-common
+  #   entrypoint: /bin/bash
+  #   # yamllint disable rule:line-length
+  #   command:
+  #     - -c
+  #     - |
+  #       function ver() {
+  #         printf "%04d%04d%04d%04d" $${1//./ }
+  #       }
+  #       airflow_version=$$(gosu airflow airflow version)
+  #       airflow_version_comparable=$$(ver $${airflow_version})
+  #       min_airflow_version=2.2.0
+  #       min_airflow_version_comparable=$$(ver $${min_airflow_version})
+  #       if (( airflow_version_comparable < min_airflow_version_comparable )); then
+  #         echo
+  #         echo -e "\033[1;31mERROR!!!: Too old Airflow version $${airflow_version}!\e[0m"
+  #         echo "The minimum Airflow version supported: $${min_airflow_version}. Only use this or higher!"
+  #         echo
+  #         exit 1
+  #       fi
+  #       if [[ -z "${AIRFLOW_UID}" ]]; then
+  #         echo
+  #         echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
+  #         echo "If you are on Linux, you SHOULD follow the instructions below to set "
+  #         echo "AIRFLOW_UID environment variable, otherwise files will be owned by root."
+  #         echo "For other operating systems you can get rid of the warning with manually created .env file:"
+  #         echo "    See: https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#setting-the-right-airflow-user"
+  #         echo
+  #       fi
+  #       one_meg=1048576
+  #       mem_available=$$(($$(getconf _PHYS_PAGES) * $$(getconf PAGE_SIZE) / one_meg))
+  #       cpus_available=$$(grep -cE 'cpu[0-9]+' /proc/stat)
+  #       disk_available=$$(df / | tail -1 | awk '{print $$4}')
+  #       warning_resources="false"
+  #       if (( mem_available < 4000 )) ; then
+  #         echo
+  #         echo -e "\033[1;33mWARNING!!!: Not enough memory available for Docker.\e[0m"
+  #         echo "At least 4GB of memory required. You have $$(numfmt --to iec $$((mem_available * one_meg)))"
+  #         echo
+  #         warning_resources="true"
+  #       fi
+  #       if (( cpus_available < 2 )); then
+  #         echo
+  #         echo -e "\033[1;33mWARNING!!!: Not enough CPUS available for Docker.\e[0m"
+  #         echo "At least 2 CPUs recommended. You have $${cpus_available}"
+  #         echo
+  #         warning_resources="true"
+  #       fi
+  #       if (( disk_available < one_meg * 10 )); then
+  #         echo
+  #         echo -e "\033[1;33mWARNING!!!: Not enough Disk space available for Docker.\e[0m"
+  #         echo "At least 10 GBs recommended. You have $$(numfmt --to iec $$((disk_available * 1024 )))"
+  #         echo
+  #         warning_resources="true"
+  #       fi
+  #       if [[ $${warning_resources} == "true" ]]; then
+  #         echo
+  #         echo -e "\033[1;33mWARNING!!!: You have not enough resources to run Airflow (see above)!\e[0m"
+  #         echo "Please follow the instructions to increase amount of resources available:"
+  #         echo "   https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#before-you-begin"
+  #         echo
+  #       fi
+  #       mkdir -p /sources/logs /sources/dags /sources/plugins
+  #       chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+  #       exec /entrypoint airflow version
+  #   # yamllint enable rule:line-length
+  #   environment:
+  #     <<: *airflow-common-env
+  #     _AIRFLOW_DB_UPGRADE: 'true'
+  #     _AIRFLOW_WWW_USER_CREATE: 'true'
+  #     _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+  #     _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+  #   user: "0:0"
+  #   volumes:
+  #     - .:/sources
 
-  airflow-cli:
-    <<: *airflow-common
-    profiles:
-      - debug
-    environment:
-      <<: *airflow-common-env
-      CONNECTION_CHECK_MAX_COUNT: "0"
-    # Workaround for entrypoint issue. See: https://github.com/apache/airflow/issues/16252
-    command:
-      - bash
-      - -c
-      - airflow
+  # airflow-cli:
+  #   <<: *airflow-common
+  #   profiles:
+  #     - debug
+  #   environment:
+  #     <<: *airflow-common-env
+  #     CONNECTION_CHECK_MAX_COUNT: "0"
+  #   # Workaround for entrypoint issue. See: https://github.com/apache/airflow/issues/16252
+  #   command:
+  #     - bash
+  #     - -c
+  #     - airflow
 
-  flower:
-    <<: *airflow-common
-    command: celery flower
-    ports:
-      - 5555:5555
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    restart: always
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
+  # flower:
+  #   <<: *airflow-common
+  #   command: celery flower
+  #   ports:
+  #     - 5555:5555
+  #   healthcheck:
+  #     test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 5
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow-init:
+  #       condition: service_completed_successfully
         
 volumes:
   postgres-db-volume:

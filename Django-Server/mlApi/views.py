@@ -18,10 +18,7 @@ from . import diffusion
 
 import multiprocessing as mp
 
-# class MLItemViewSet(viewsets.ModelViewSet):
-#     queryset = MLItem.objects.all()
-#     serializer_class = MLItemSerializer
-kafka_topic = ('inference_diary', 'inference_dialogue', 'diffusion')
+kafka_topic = ('inference_prompt', 'image')
 
 class TestPostMessageKafkaView(CreateAPIView):
     model = MLItem
@@ -66,22 +63,9 @@ class SummaryDiaryView(CreateAPIView):
         prompt = self.request.data.get("prompt", None)
         url = self.request.data.get("url", None)
         thumbnail_url = self.request.data.get("thumbnail_url", None)
+        diary_id = self.request.data.get("diary_id", None)
 
-        # json_data = {
-        #         'full_diary': full_diary,
-        #         'full_dialog': full_dialog,
-        #         'prompt' : prompt,
-        #         'url' : url,
-        #         'thumbnail_url' : thumbnail_url,
-        #         'serializer' : serializer
-        #     }
-        # p_infer_diary = mp.Process(target=kn.to_kafka_summm_infer_diary, args=(kafka_topic[0], json_data))
-        # p_infer_diary.start()
-
-        summarize = summ.inference_diary(full_diary) # input: String type
-        # print(summarize)
-        # summarize = "친구와 역에서 만났다."
-        optimized_prompt = promptist.promptist_manual(summarize)
+        optimized_prompt = kn.to_kafka_summm_infer_diary(kafka_topic[0], diary_id, full_diary)
 
         if serializer.is_valid():
             serializer.save(
@@ -100,13 +84,7 @@ class SummaryDialogueView(CreateAPIView):
 
     def perform_create(self, serializer):
         req_urls = self.request.data.get('req_urls') # 얘는 꼭 필요 -> 이미지에서 가져와야함.
-
-        # json_data = {
-        #         'value' : req_urls,
-        #         'serializer' : serializer
-        #     }
-        # p_infer_dialogue = mp.Process(target=kn.to_kafka_summm_infer_dialogue, args=(kafka_topic[1], json_data))
-        # p_infer_dialogue.start()
+        diary_id = self.request.data.get("diary_id", None)
         
         processes = []  
         manager = mp.Manager()
@@ -123,13 +101,11 @@ class SummaryDialogueView(CreateAPIView):
         sorted_return_dict = sorted(return_dict.items())
         get_values = lambda lst: [value for _, value in lst]
         sum_dialogue = get_values(sorted_return_dict)
+        if len(req_urls) > 1:
+            get_values = lambda lst: [value[0] for value in lst]
+            sum_dialogue = get_values(sum_dialogue)
 
-        get_values = lambda lst: [value[0] for value in lst]
-        sum_dialogue = get_values(sum_dialogue)
-        print(sum_dialogue)
-        
-        summarize = summ.inference_dialogue(sum_dialogue) # input: List type
-        optimized_prompt = promptist.promptist_manual(summarize)
+        optimized_prompt = kn.to_kafka_summm_infer_diary(kafka_topic[0], diary_id, sum_dialogue)
 
         if serializer.is_valid():
             serializer.save(
@@ -150,17 +126,6 @@ class GenerateImageCreateView(CreateAPIView):
         prompt = self.request.data.get("prompt", None)
         url = self.request.data.get("url", None)
         thumbnail_url = self.request.data.get("thumbnail_url", None)
-
-        # json_data = {
-        #         'full_diary': full_diary,
-        #         'full_dialog': full_dialog,
-        #         'prompt' : prompt,
-        #         'url' : url,
-        #         'thumbnail_url' : thumbnail_url,
-        #         'serializer' : serializer
-        #     }
-        # p_diffusion = mp.Process(target=kn.to_kafka_diffusion, args=(kafka_topic[2], json_data))
-        # p_diffusion.start()
 
         files = []
         img = diffusion.generate_one(prompt)
@@ -184,39 +149,3 @@ class GenerateImageCreateView(CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED) 
         except:
             return Response (serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-# class GenerateImageUpdateView(UpdateAPIView):
-#     queryset = MLItem.objects.all()
-#     serializer_class = MLItemSerializer
-#     lookup_field = 'pk'
-
-#     def update(self, request, *args, **kwargs):
-#         partial = kwargs.pop('partial', True)
-#         instance = self.get_object()
-
-#         # 이미지 생성
-#         files = []
-#         img = diffusion.generate_one(instance.prompt)
-#         files.append(img)
-
-#         # S3 upload
-#         uploaded_urls = []
-#         try :
-#             for filename in files :
-#                 url = diffusion.uploadS3(filename)
-#                 uploaded_urls.append(url)
-
-#             data = {'url' : AWS_S3_CUSTOM_DOMAIN+"%s"%(file)}
-#             serializer = self.get_serializer(instance, data=data, partial=partial)
-
-#             if serializer.is_valid():
-#                 self.perform_update(serializer)
-#                 return Response(serializer.data, status=status.HTTP_200_OK) 
-#             return Response (serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#         except:
-#             return Response (serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# class DeleteView(DestroyAPIView):
-#     queryset = MLItem.objects.all()
-#     serializer_class = MLItemSerializer
-#     lookup_field = 'pk'
