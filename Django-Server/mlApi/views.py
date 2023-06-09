@@ -107,11 +107,16 @@ class SummaryDialogueView(CreateAPIView):
         sorted_return_dict = sorted(return_dict.items())
         get_values = lambda lst: [value for _, value in lst]
         sum_dialogue = get_values(sorted_return_dict)
-        if len(req_urls) > 1:
-            get_values = lambda lst: [value[0] for value in lst]
-            sum_dialogue = get_values(sum_dialogue)
+        # print('sum_dialogue all => ' + str(sum_dialogue))
+        flatten = lambda lst: [item for sublist in lst for item in sublist]
+        sum_dialogue_flatten = flatten(sum_dialogue)
+        print('sum_dialogue flatten=> ' + str(sum_dialogue_flatten))
 
-        optimized_prompt = kn.to_kafka_summm_infer_diary(kafka_topic[0], diary_id, sum_dialogue)
+        summarize = summ.inference_dialogue(sum_dialogue_flatten) # input: List type
+        print('summarize => ' + str(summarize))
+        optimized_prompt = promptist.promptist_manual(summarize)
+
+#         optimized_prompt = kn.to_kafka_summm_infer_diary(kafka_topic[0], diary_id, sum_dialogue)
 
         if serializer.is_valid():
             serializer.save(
