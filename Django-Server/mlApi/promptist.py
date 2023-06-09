@@ -1,4 +1,9 @@
+from django.conf import settings
+
 import os
+import sys
+import json
+import urllib.request
 
 # google
 import googletrans
@@ -6,12 +11,34 @@ import googletrans
 # ML
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+NCP_CLIENT_ID = getattr(settings, 'NCP_CLIENT_ID', 'NCP_CLIENT_ID')
+NCP_CLIENT_KEY = getattr(settings, 'NCP_CLIENT_KEY', 'NCP_CLIENT_KEY')
+
 def translator(original):
     #### translate korean to english
     translator = googletrans.Translator()
     outStr = translator.translate(original, dest = 'en', src = 'auto')
     
     return outStr.text
+
+def translator_naver(original):
+    encText = urllib.parse.quote(original)
+    data = "source=ko&target=en&text=" + encText
+    url = "https://naveropenapi.apigw.ntruss.com/nmt/v1/translation"
+    request = urllib.request.Request(url)
+    request.add_header("X-NCP-APIGW-API-KEY-ID", NCP_CLIENT_ID)
+    request.add_header("X-NCP-APIGW-API-KEY", NCP_CLIENT_KEY)
+    response = urllib.request.urlopen(request, data=data.encode("utf-8"))
+    rescode = response.getcode()
+    if(rescode==200):
+        response_body = response.read()
+        response_json = json.loads(response_body.decode('utf-8'))
+
+        translatedText = response_json['message']['result']['translatedText']
+        return translatedText
+    else:
+        print("Error Code:" + rescode)
+
 
 def load_prompter():
     prompter_model = AutoModelForCausalLM.from_pretrained(f"{os.getcwd()}/mlAPi/weights/ms-promptist/", local_files_only=True)
@@ -32,7 +59,8 @@ def generate(plain_text, prompter_model, prompter_tokenizer):
     return res
 
 def promptist_manual(summarize_text): # 여기로 요약 데이터가 들어감.
-    translated = translator(summarize_text)
+    #translated = translator(summarize_text)
+    translated = translator_naver(summarize_text)
     # prompt = translated + ", Pixar colored lineart in the style of WLOP and Atey Ghailan"
     prompt = translated + ", very realistic, highly detailed, digital painting, concept art, illustration, in (modern Disney style), 4k"
 
