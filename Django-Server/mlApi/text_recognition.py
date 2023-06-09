@@ -28,14 +28,10 @@ def isHangul(text):
     return hanCount > 0
 
 def get_dialogue(data):
-    # with open('json_sample.json', encoding='utf-8') as data:
     json_data = json.loads(data.text.encode('utf8'))
-    # json_data = json.load(data)
-    # json_data = data
 
     bbox_ls = []
     images_ls = json_data.get('images')
-    # print('images :' + str(images_ls))
     fields_ls = images_ls[0]['fields']
 
     for idx, field in enumerate(fields_ls):
@@ -55,20 +51,41 @@ def get_dialogue(data):
     
     # 대화 추출
     participant = ''
+    participant_ls = []
+    participant_box_y = 0
+    participant_search_status = False
     for idx, row in enumerate(bbox_ls):
-        if isHangul(row[-1]) == True:
-            participant = row[-1]
-            bbox_ls = bbox_ls[idx+1:]
+        if participant_search_status:
             break
 
-    new_bbox_ls = []
-    dialogue = []
+        if isHangul(row[-1]) == True:
+            if len(participant_ls) >= 1:
+                # '명지대 홍길동' 등 이름이 띄어쓰기로 긴 경우 대화 상대인지 y좌표로 판별
+                box_y = row[1] - participant_box_y
+                if box_y > 20:
+                    bbox_ls = bbox_ls[idx:]
+                    participant_search_status = True
+                    break
+            participant_ls.append(row[-1])
+            participant_box_y = row[1]
+
+            # bbox_ls = bbox_ls[idx+1:]
+
+        if isHangul(row[-1]) == False and len(participant_ls) >= 1:
+            break
+
+    participant = ' '.join(participant_ls) 
+    print(participant)
 
     # 날짜 판별 "11:34"
     time_pattern = re.compile(r'^\d{1,2}:\d{2}$')
     check_time_format = lambda time_str: bool(time_pattern.match(time_str))
 
+    new_bbox_ls = []
+    dialogue = []
     for idx, row in enumerate(bbox_ls):
+        if len(dialogue) > 1 and ' '.join(dialogue) == participant:
+            dialogue = dialogue[len(dialogue):]
         if row[-1] == participant:
             continue
         elif check_time_format(row[-1]):
