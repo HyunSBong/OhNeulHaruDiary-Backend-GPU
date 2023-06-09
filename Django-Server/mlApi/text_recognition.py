@@ -55,9 +55,13 @@ def get_dialogue(data):
     participant_box_y = 0
     participant_search_status = False
     for idx, row in enumerate(bbox_ls):
+        # exception
         if participant_search_status:
             break
-
+        # 대화 상태 y좌표 구분 (좌표값이 110 이하안 경우 아이폰 카카오톡에서 투명하게 보이는 대화 내용이 감지되는 예외 처리)
+        if row[1] < 110:
+            continue
+        # 대화 상대 인식
         if isHangul(row[-1]) == True:
             if len(participant_ls) >= 1:
                 # '명지대 홍길동' 등 이름이 띄어쓰기로 긴 경우 대화 상대인지 y좌표로 판별
@@ -70,7 +74,7 @@ def get_dialogue(data):
             participant_box_y = row[1]
 
             # bbox_ls = bbox_ls[idx+1:]
-
+        # exception
         if isHangul(row[-1]) == False and len(participant_ls) >= 1:
             break
 
