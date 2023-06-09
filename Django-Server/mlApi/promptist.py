@@ -33,7 +33,7 @@ def generate(plain_text, prompter_model, prompter_tokenizer):
 
 def promptist_manual(summarize_text): # 여기로 요약 데이터가 들어감.
     translated = translator(summarize_text)
-    prompt = translated + ", Pixar colored lineart in the style of WLOP and Atey Ghailan"
+    prompt = translated + ", fantasy, intricate, elegant, highly detailed, digital painting, artstation, concept art, matte, sharp focus, illustration, hearthstone, in (modern Disney style), 4k"
 
     return prompt
 
