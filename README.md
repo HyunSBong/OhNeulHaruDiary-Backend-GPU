@@ -4,6 +4,7 @@
 ## 프로젝트 개요
 명지대학교 캡스톤디자인 프로젝트 - SketchDay (기록을 더 풍성하게, 그림 일기 서비스)
 <img width="1080" alt="title" src="https://user-images.githubusercontent.com/69189272/233691909-1cab5b7e-ea80-42f3-84a8-e794a34a1350.png">
+<img width="724" alt="content" src="https://github.com/MJU-capstone-2023/SketchDay-Backend-ML/assets/69189272/7fc248d4-3871-46c2-849d-d75828e3a81e">
 
 ## 주요기능
 - 일기 내용을 기반으로 적절한 그림 생성
@@ -17,8 +18,8 @@
 
 |분류|이름|버전|
 |:---|:---|:---|
-|운영체제|ubuntu|22.04|
-|운영체제|MacOS|13.2|
+|OS|ubuntu|22.04|
+|OS|MacOS|13.2|
 ||Docker|20.10.7|
 ||Docker-compose|3.2|
 ||Kafdrop|4.0.0|
@@ -50,3 +51,6 @@
 
 ## Service Architecture
 <img width="1079" alt="workflow" src="https://user-images.githubusercontent.com/69189272/233691906-0b273fba-142c-4c27-aa65-67be3a693b1d.png">
+
+## Contact
+본 프로젝트는 NCP papago translation, email auth 등 실행 전에 설정해야할 부분이 많습니다. 관심있으신 분은 [email](sanseng@mju.ac.kr)로 연락주세요.
